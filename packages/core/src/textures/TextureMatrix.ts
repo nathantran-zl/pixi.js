@@ -147,7 +147,7 @@ export class TextureMatrix
      * @param {boolean} [forceUpdate=false] if true, matrices will be updated any case
      * @returns {boolean} whether or not it was updated
      */
-    update(forceUpdate: boolean)
+    update(forceUpdate?: boolean)
     {
         const tex = this._texture;
 

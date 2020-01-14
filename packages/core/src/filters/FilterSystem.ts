@@ -6,81 +6,10 @@ import { Rectangle, Matrix } from '@pixi/math';
 import { UniformGroup } from '../shader/UniformGroup';
 import { DRAW_MODES } from '@pixi/constants';
 
-import { IFilterTarget } from './IFilterTarget';
+import { FilterState } from './FilterState';
 import { Filter } from './Filter';
-
-/**
- * System plugin to the renderer to manage filter states.
- *
- * @class
- * @private
- */
-class FilterState
-{
-    constructor()
-    {
-        this.renderTexture = null;
-
-        /**
-         * Target of the filters
-         * We store for case when custom filter wants to know the element it was applied on
-         * @member {PIXI.DisplayObject}
-         * @private
-         */
-        this.target = null;
-
-        /**
-         * Compatibility with PixiJS v4 filters
-         * @member {boolean}
-         * @default false
-         * @private
-         */
-        this.legacy = false;
-
-        /**
-         * Resolution of filters
-         * @member {number}
-         * @default 1
-         * @private
-         */
-        this.resolution = 1;
-
-        // next three fields are created only for root
-        // re-assigned for everything else
-
-        /**
-         * Source frame
-         * @member {PIXI.Rectangle}
-         * @private
-         */
-        this.sourceFrame = new Rectangle();
-
-        /**
-         * Destination frame
-         * @member {PIXI.Rectangle}
-         * @private
-         */
-        this.destinationFrame = new Rectangle();
-
-        /**
-         * Collection of filters
-         * @member {PIXI.Filter[]}
-         * @private
-         */
-        this.filters = [];
-    }
-
-    /**
-     * clears the state
-     * @private
-     */
-    clear()
-    {
-        this.target = null;
-        this.filters = null;
-        this.renderTexture = null;
-    }
-}
+import { IFilterTarget } from './IFilterTarget';
+import {Renderer, RenderTexture, ISpriteMaskTarget} from "@pixi/core";
 
 /**
  * System plugin to the renderer to manage the filters.
@@ -91,10 +20,19 @@ class FilterState
  */
 export class FilterSystem extends System
 {
+    defaultFilterStack: Array<FilterState>;
+    statePool: Array<FilterState>;
+    texturePool: RenderTexturePool;
+    quad: Quad;
+    quadUv: QuadUv;
+    private tempRect: Rectangle;
+    activeState: FilterState;
+    globalUniforms: UniformGroup;
+
     /**
      * @param {PIXI.Renderer} renderer - The renderer this System works for.
      */
-    constructor(renderer)
+    constructor(renderer: Renderer)
     {
         super(renderer);
 
@@ -103,7 +41,7 @@ export class FilterSystem extends System
          * @member {Object[]}
          * @readonly
          */
-        this.defaultFilterStack = [{}];
+        this.defaultFilterStack = [{}] as any;
 
         /**
          * stores a bunch of PO2 textures used for filtering
@@ -141,7 +79,7 @@ export class FilterSystem extends System
          * Active state
          * @member {object}
          */
-        this.activeState = {};
+        this.activeState = {} as any;
 
         /**
          * This uniform group is attached to filter uniforms when used
@@ -165,9 +103,6 @@ export class FilterSystem extends System
             filterArea: new Float32Array(4),
             filterClamp: new Float32Array(4),
         }, true);
-
-        this._pixelsWidth = renderer.view.width;
-        this._pixelsHeight = renderer.view.height;
     }
 
     /**
@@ -337,7 +272,7 @@ export class FilterSystem extends System
      * @param {PIXI.RenderTexture} output - The target to output to.
      * @param {boolean} clear - Should the output be cleared before rendering to it
      */
-    applyFilter(filter, input, output, clear)
+    applyFilter(filter: Filter, input: RenderTexture, output: RenderTexture, clear: boolean)
     {
         const renderer = this.renderer;
 
@@ -384,7 +319,7 @@ export class FilterSystem extends System
      * @param {PIXI.Sprite} sprite - The sprite to map to.
      * @return {PIXI.Matrix} The mapped matrix.
      */
-    calculateSpriteMatrix(outputMatrix, sprite)
+    calculateSpriteMatrix(outputMatrix: Matrix, sprite: ISpriteMaskTarget)
     {
         const { sourceFrame, destinationFrame } = this.activeState;
         const { orig } = sprite._texture;
@@ -418,7 +353,7 @@ export class FilterSystem extends System
      * @param {number} [resolution=1] - The resolution of the render texture.
      * @return {PIXI.RenderTexture} The new render texture.
      */
-    getOptimalFilterTexture(minWidth, minHeight, resolution = 1)
+    getOptimalFilterTexture(minWidth: number, minHeight: number, resolution = 1)
     {
         return this.texturePool.getOptimalTexture(minWidth, minHeight, resolution);
     }
@@ -431,13 +366,13 @@ export class FilterSystem extends System
      * @param {number} [resolution] override resolution of the renderTexture
      * @returns {PIXI.RenderTexture}
      */
-    getFilterTexture(input, resolution)
+    getFilterTexture(input: RenderTexture, resolution: number)
     {
         if (typeof input === 'number')
         {
             const swap = input;
 
-            input = resolution;
+            input = resolution as any;
             resolution = swap;
         }
 
@@ -455,7 +390,7 @@ export class FilterSystem extends System
      *
      * @param {PIXI.RenderTexture} renderTexture - The renderTarget to free
      */
-    returnFilterTexture(renderTexture)
+    returnFilterTexture(renderTexture: RenderTexture)
     {
         this.texturePool.returnTexture(renderTexture);
     }

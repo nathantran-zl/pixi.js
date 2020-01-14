@@ -1,9 +1,8 @@
 import { BaseImageResource } from './BaseImageResource';
 import { settings } from '@pixi/settings';
 import { ALPHA_MODES } from '@pixi/constants';
-import { BaseTexture } from '../BaseTexture';
-import { Renderer } from '../../Renderer';
-import { GLTexture } from '../GLTexture';
+
+import { BaseTexture, Renderer, GLTexture } from '@pixi/core';
 
 export interface IImageResourceOptions
 {

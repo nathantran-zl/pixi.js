@@ -1,10 +1,7 @@
 import { BaseTextureCache, EventEmitter, isPow2, TextureCache, uid } from '@pixi/utils';
 import { FORMATS, SCALE_MODES, TARGETS, TYPES, ALPHA_MODES, MIPMAP_MODES, WRAP_MODES } from '@pixi/constants';
 
-import { Resource } from './resources/Resource';
-import { BufferResource } from './resources/BufferResource';
-import { ImageSource } from './resources/BaseImageResource';
-import { autoDetectResource } from './resources/autoDetectResource';
+import { Resource, BufferResource, ImageSource, autoDetectResource } from './resources';
 import { GLTexture } from './GLTexture';
 
 import { settings } from '@pixi/settings';

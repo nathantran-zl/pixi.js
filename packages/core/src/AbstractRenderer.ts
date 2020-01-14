@@ -20,6 +20,7 @@ export class AbstractRenderer extends EventEmitter
 {
     _backgroundColor: number;
     _backgroundColorRgba: number[];
+    readonly view: HTMLCanvasElement;
 
     /**
      * @param {string} system - The name of the system this renderer is for.

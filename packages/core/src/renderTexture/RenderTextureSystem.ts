@@ -3,7 +3,7 @@ import { Rectangle } from '@pixi/math';
 
 import { Renderer } from '../Renderer';
 import { RenderTexture } from './RenderTexture';
-import {BaseRenderTexture} from "@pixi/core";
+import { BaseRenderTexture } from './BaseRenderTexture';
 
 const tempRect = new Rectangle();
 
@@ -152,7 +152,7 @@ export class RenderTextureSystem extends System
      *
      * @param {number[]} [clearColor] - The color as rgba, default to use the renderer backgroundColor
      */
-    clear(clearColor: number[])
+    clear(clearColor?: number[])
     {
         if (this.current)
         {

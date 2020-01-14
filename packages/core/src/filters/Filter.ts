@@ -5,8 +5,9 @@ import { settings } from '@pixi/settings';
 import defaultVertex from './defaultFilter.vert';
 import defaultFragment from './defaultFilter.frag';
 
+import { RenderTexture } from '@pixi/core';
 import { FilterSystem } from './FilterSystem';
-import { RenderTexture } from '../renderTexture/RenderTexture';
+import { FilterState } from './FilterState';
 
 /**
  * Filter is a special type of WebGL shader that is applied to the screen.
@@ -221,11 +222,14 @@ export class Filter extends Shader
      *        There are some useful properties in the currentState :
      *        target, filters, sourceFrame, destinationFrame, renderTarget, resolution
      */
-    apply(filterManager: FilterSystem, input: RenderTexture, output: RenderTexture, clear, currentState)
+    apply(filterManager: FilterSystem, input: RenderTexture, output: RenderTexture, clear: boolean,
+          // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+          // @ts-ignore
+          currentState?: FilterState)
     {
         // do as you please!
 
-        filterManager.applyFilter(this, input, output, clear, currentState);
+        filterManager.applyFilter(this, input, output, clear);
 
         // or just do a regular render..
     }

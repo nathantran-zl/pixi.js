@@ -28,7 +28,7 @@ export class RenderTexturePool
      * @param {object} [textureOptions] - options that will be passed to BaseRenderTexture constructor
      * @param {PIXI.SCALE_MODES} [textureOptions.scaleMode] - See {@link PIXI.SCALE_MODES} for possible values.
      */
-    constructor(textureOptions: IBaseTextureOptions)
+    constructor(textureOptions?: IBaseTextureOptions)
     {
         this.texturePool = {};
         this.textureOptions = textureOptions || {};

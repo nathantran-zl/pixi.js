@@ -1,15 +1,17 @@
 import { Filter } from '../Filter';
-import { Matrix } from '@pixi/math';
+import { Matrix, Point } from '@pixi/math';
 import vertex from './spriteMaskFilter.vert';
 import fragment from './spriteMaskFilter.frag';
 import { TextureMatrix } from '../../textures/TextureMatrix';
 
-import { IMaskTarget } from '../../mask/MaskData';
-import { Texture } from '../../textures/Texture';
+import { FilterSystem } from '../FilterSystem';
+import { IMaskTarget, Texture, RenderTexture } from '@pixi/core';
 
 export interface ISpriteMaskTarget extends IMaskTarget
 {
-    texture: Texture;
+    _texture: Texture;
+    worldAlpha: number;
+    anchor: Point;
 }
 
 /**
@@ -57,30 +59,30 @@ export class SpriteMaskFilter extends Filter
      * @param {PIXI.RenderTexture} output - The target to output to.
      * @param {boolean} clear - Should the output be cleared before rendering to it.
      */
-    apply(filterManager: FilterSystem, input: RenderTexture, output: RenderTexture, clear)
+    apply(filterManager: FilterSystem, input: RenderTexture, output: RenderTexture, clear: boolean)
     {
         const maskSprite = this.maskSprite as ISpriteMaskTarget;
-        const tex = this.maskSprite.texture;
+        const tex = maskSprite._texture;
 
         if (!tex.valid)
         {
             return;
         }
-        if (!tex.transform)
+        if (!tex.uvMatrix)
         {
             // margin = 0.0, let it bleed a bit, shader code becomes easier
             // assuming that atlas textures were made with 1-pixel padding
-            tex.transform = new TextureMatrix(tex, 0.0);
+            tex.uvMatrix = new TextureMatrix(tex, 0.0);
         }
-        tex.transform.update();
+        tex.uvMatrix.update();
 
         this.uniforms.npmAlpha = tex.baseTexture.alphaMode ? 0.0 : 1.0;
         this.uniforms.mask = tex;
         // get _normalized sprite texture coords_ and convert them to _normalized atlas texture coords_ with `prepend`
         this.uniforms.otherMatrix = filterManager.calculateSpriteMatrix(this.maskMatrix, maskSprite)
-            .prepend(tex.transform.mapCoord);
+            .prepend(tex.uvMatrix.mapCoord);
         this.uniforms.alpha = maskSprite.worldAlpha;
-        this.uniforms.maskClamp = tex.transform.uClampFrame;
+        this.uniforms.maskClamp = tex.uvMatrix.uClampFrame;
 
         filterManager.applyFilter(this, input, output, clear);
     }

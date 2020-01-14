@@ -1,8 +1,6 @@
 import { Runner } from '@pixi/runner';
 
-import { BaseTexture } from '../BaseTexture';
-import { Renderer } from '../../Renderer';
-import { GLTexture } from '../GLTexture';
+import { BaseTexture, Renderer, GLTexture } from '@pixi/core';
 
 /**
  * Base resource class for textures that manages validation and uploading, depending on its type.
@@ -245,5 +243,19 @@ export class Resource
             this.onUpdate.removeAll();
             this.onUpdate = null;
         }
+    }
+
+    /**
+     * Abstract, used to auto-detect resource type
+     *
+     * @static
+     * @param {*} source - The source object
+     * @param {string} extension - The extension of source, if set
+     */
+    // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+    // @ts-ignore
+    static test(source: any, extension?: string)
+    {
+        return false;
     }
 }

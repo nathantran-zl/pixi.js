@@ -1,6 +1,6 @@
 import { AbstractMaskSystem } from './AbstractMaskSystem';
 
-import { Renderer } from '../Renderer';
+import { Renderer } from '@pixi/core';
 import { MaskData } from './MaskData';
 /**
  * System plugin to the renderer to manage scissor rects (used for masks).

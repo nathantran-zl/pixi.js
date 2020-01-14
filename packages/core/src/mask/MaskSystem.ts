@@ -3,7 +3,7 @@ import { IMaskTarget, MaskData } from './MaskData';
 import { SpriteMaskFilter } from '../filters/spriteMask/SpriteMaskFilter';
 import { MASK_TYPES } from '@pixi/constants';
 
-import { Renderer } from '../Renderer';
+import { Renderer } from '@pixi/core';
 
 /**
  * System plugin to the renderer to manage masks.

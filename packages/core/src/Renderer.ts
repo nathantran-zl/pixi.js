@@ -54,6 +54,7 @@ export class Renderer extends AbstractRenderer
     batch: BatchSystem;
 
     resolution: number;
+    renderingToScreen: boolean;
 
     /**
      * Create renderer if WebGL is available. Overrideable
