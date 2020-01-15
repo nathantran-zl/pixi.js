@@ -1,3 +1,4 @@
+import { FilterPass } from './FilterPass';
 import { System } from '../System';
 import { RenderTexturePool } from '../renderTexture/RenderTexturePool';
 import { Quad } from '../utils/Quad';
@@ -7,10 +8,11 @@ import { UniformGroup } from '../shader/UniformGroup';
 import { DRAW_MODES } from '@pixi/constants';
 
 /**
- * System plugin to the renderer to manage filter states.
+ * Stateful object that is provided to filters for unilaterial communication
+ * from the filter system.
  *
  * @class
- * @private
+ * @namespace PIXI
  */
 class FilterState
 {
@@ -42,18 +44,28 @@ class FilterState
          */
         this.resolution = 1;
 
-        // next three fields are created only for root
-        // re-assigned for everything else
+        // Following 3 properties are not reassigned, rather they are copied
+        // into.
 
         /**
-         * Source frame
+         * Filter area on the screen, which is the output frame for the last
+         * filter.
          * @member {PIXI.Rectangle}
          * @private
          */
         this.sourceFrame = new Rectangle();
 
         /**
-         * Destination frame
+         * Bounds of the target object, plus any padding.
+         * @member {PIXI.Rectangle}
+         * @readonly
+         */
+        this.targetFrame = new Rectangle();
+
+        /**
+         * Destination frame on the texture, i.e. the dimensions of the render
+         * texture(s) being used for filter input/output. This is not the "output"
+         * of the last filter on the screen.
          * @member {PIXI.Rectangle}
          * @private
          */
@@ -65,17 +77,42 @@ class FilterState
          * @private
          */
         this.filters = [];
+
+        /**
+         * Input/output measured frames for each filter.
+         * @member {PIXI.FilterPass[]}
+         * @private
+         */
+        this.filterPasses = [];
+
+        /**
+         * Index of the filter being applied currently.
+         * @member {number}
+         * @readonly
+         */
+        this.passIndex = 0;
     }
 
     /**
-     * clears the state
+     * The current filter pass data.
+     * @member {PIXI.FilterPass}
+     */
+    get filterPass()
+    {
+        return this.filterPasses[this.passIndex];
+    }
+
+    /**
+     * Resets the state.
      * @private
      */
     clear()
     {
         this.target = null;
-        this.filters = null;
         this.renderTexture = null;
+        this.filters = null;
+        this.filterPasses = [];
+        this.passIndex = 0;
     }
 }
 
@@ -168,7 +205,7 @@ export class FilterSystem extends System
     }
 
     /**
-     * Adds a new filter to the System.
+     * Push a new set of filters in the system.
      *
      * @param {PIXI.DisplayObject} target - The target of the filter to render.
      * @param {PIXI.Filter[]} filters - The filters to apply.
@@ -179,25 +216,6 @@ export class FilterSystem extends System
         const filterStack = this.defaultFilterStack;
         const state = this.statePool.pop() || new FilterState();
 
-        let resolution = filters[0].resolution;
-        let padding = filters[0].padding;
-        let autoFit = filters[0].autoFit;
-        let legacy = filters[0].legacy;
-
-        for (let i = 1; i < filters.length; i++)
-        {
-            const filter =  filters[i];
-
-            // lets use the lowest resolution..
-            resolution = Math.min(resolution, filter.resolution);
-            // and the largest amount of padding!
-            padding = Math.max(padding, filter.padding);
-            // only auto fit if all filters are autofit
-            autoFit = autoFit || filter.autoFit;
-
-            legacy = legacy || filter.legacy;
-        }
-
         if (filterStack.length === 1)
         {
             this.defaultFilterStack[0].renderTexture = renderer.renderTexture.current;
@@ -205,29 +223,16 @@ export class FilterSystem extends System
 
         filterStack.push(state);
 
-        state.resolution = resolution;
-
-        state.legacy = legacy;
-
         state.target = target;
-
-        state.sourceFrame.copyFrom(target.filterArea || target.getBounds(true));
-
-        state.sourceFrame.pad(padding);
-        if (autoFit)
-        {
-            state.sourceFrame.fit(this.renderer.renderTexture.sourceFrame);
-        }
-
-        // round to whole number based on resolution
-        state.sourceFrame.ceil(resolution);
-
-        state.renderTexture = this.getOptimalFilterTexture(state.sourceFrame.width, state.sourceFrame.height, resolution);
         state.filters = filters;
+        this.measure(state);
 
+        state.renderTexture = this.getOptimalFilterTexture(
+            state.sourceFrame.width,
+            state.sourceFrame.height,
+            state.resolution);
         state.destinationFrame.width = state.renderTexture.width;
         state.destinationFrame.height = state.renderTexture.height;
-
         state.renderTexture.filterFrame = state.sourceFrame;
 
         renderer.renderTexture.bind(state.renderTexture, state.sourceFrame);// /, state.destinationFrame);
@@ -235,8 +240,7 @@ export class FilterSystem extends System
     }
 
     /**
-     * Pops off the filter and applies it.
-     *
+     * Pops off the last set of filters and applies them.
      */
     pop()
     {
@@ -308,7 +312,10 @@ export class FilterSystem extends System
 
             for (i = 0; i < filters.length - 1; ++i)
             {
+                globalUniforms.inputRect = state.filterPass.inputRect;
+                globalUniforms.outputRect = state.filterPass.outputRect;
                 filters[i].apply(this, flip, flop, true, state);
+                ++state.passIndex;
 
                 const t = flip;
 
@@ -324,6 +331,80 @@ export class FilterSystem extends System
 
         state.clear();
         this.statePool.push(state);
+    }
+
+    measure(state)
+    {
+        const target = state.target;
+
+        let filters = state.filters;
+        let resolution = filters[0].resolution;
+        let autoFit = filters[0].autoFit;
+        let legacy = filters[0].legacy;
+        let padding = filters[0].padding;
+
+        for (let i = 1; i < filters.length; i++)
+        {
+            const filter =  filters[i];
+
+            resolution = Math.min(resolution, filter.resolution);
+            autoFit = autoFit && filter.autoFit;
+            legacy = legacy || filter.legacy;
+            padding = Math.max(padding, filter.padding);
+        }
+
+        state.resolution = resolution;
+        state.legacy = legacy;
+        state.target = target;
+        state.padding = padding;
+
+        state.sourceFrame.copyFrom(target.filterArea || target.getBounds(true));
+        state.sourceFrame.pad(padding);
+        state.targetFrame.copyFrom(state.sourceFrame);
+
+        if (autoFit)
+        {
+            state.sourceFrame.fit(this.renderer.renderTexture.sourceFrame);
+        }
+
+        state.sourceFrame.ceil();
+
+        const { sourceFrame } = state;
+        let filterPassRect = sourceFrame;
+        let renderable = true;
+        let mutated = false; // did we change filters array?
+
+        for (let i = filters.length - 1; i >= 0; i--)
+        {
+            const filter = filters[i];
+            const filterPass = new FilterPass();
+            const outputFrame = filterPassRect.clone();
+
+            filter.measure(
+                filterPass.withDefinedOutput(outputFrame),
+                outputFrame,
+                target.getBounds(true));
+
+            const inputFrame = filterPass.inputRect;
+
+            // Delete filters with null-like input
+            if (inputFrame.width <= 0 || inputFrame.height <= 0)
+            {
+                if (!mutated)
+                {
+                    filters = state.filters.slice();
+                    state.filters = filters;
+                    mutated = true;
+                }
+
+                filters.splice(i, 1);
+                continue;
+            }
+
+            state.filterPasses.push(filterPass);
+            filterPassRect = filterPass.inputRect.ceil();
+            renderable = renderable & filterPass.isRenderable;
+        }
     }
 
     /**

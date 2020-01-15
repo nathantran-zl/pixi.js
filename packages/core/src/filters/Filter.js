@@ -202,6 +202,45 @@ export class Filter extends Shader
     }
 
     /**
+     * Override this to measure your filter's pass requirements.
+     *
+     * @param {PIXI.FilterPass} results - object into which measurement are to
+     *      be stored. Setting the output-rect is optional.
+     * @param {PIXI.Rectangle} outputFrame - frame into which filter will render
+     * @param {PIXI.Rectangle} nakedTargetBounds - bounds of the object being
+     *      rendered.
+     */
+    onMeasure(results, outputFrame, nakedTargetBounds) // eslint-disable-line no-unused-vars
+    {
+        if (!this.autoFit)
+        {
+            results.inputRect = nakedTargetBounds;
+        }
+
+        results.inputRect = outputFrame;
+        results.isRenderable = true;
+    }
+
+    /**
+     * Should measure what input-frame would be required to render the given
+     * output. The measured results will given back later in when the filter
+     * is applied.
+     *
+     * Use the `onMeasure` method to override this.
+     *
+     * @param {PIXI.FilterPass} results - object into which measurement are to
+     *      be stored. Setting the output-rect is optional.
+     * @param {PIXI.Rectangle} outputFrame - frame into which filter will render
+     * @param {PIXI.Rectangle} nakedTargetBounds - bounds of the object being
+     *      rendered.
+     * @see Filter#onMeasure
+     */
+    measure(results, outputFrame, nakedTargetBounds) // eslint-disable-line no-unused-vars
+    {
+        this.onMeasure(results, outputFrame, nakedTargetBounds);
+    }
+
+    /**
      * Applies the filter
      *
      * @param {PIXI.systems.FilterSystem} filterManager - The renderer to retrieve the filter from
@@ -270,4 +309,3 @@ export class Filter extends Shader
  * @protected
  */
 Filter.SOURCE_KEY_MAP = {};
-
